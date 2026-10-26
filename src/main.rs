@@ -1266,7 +1266,8 @@ mod tests {
     }
 
     fn rels(root: &Path, found: &[(PathBuf, &str)]) -> Vec<String> {
-        found.iter().map(|(p, _)| p.strip_prefix(root).unwrap().display().to_string()).collect()
+        // with `/` on every system, to compare against the expected names
+        found.iter().map(|(p, _)| p.strip_prefix(root).unwrap().iter().map(|c| c.to_string_lossy()).collect::<Vec<_>>().join("/")).collect()
     }
 
     #[test]
@@ -1354,14 +1355,20 @@ mod tests {
     fn odd_names_and_empty_folders() {
         let d = tempfile::tempdir().unwrap();
         let src = d.path().join("src");
-        for name in ["with space.txt", "ünïcödé ✓.txt", "-dash.txt", "new\nline.txt", ".hidden"] {
+        let mut names = vec!["with space.txt", "ünïcödé ✓.txt", "-dash.txt", ".hidden"];
+        if cfg!(unix) {
+            names.push("new\nline.txt"); // not allowed in Windows file names
+        }
+        for name in &names {
             write(&src.join(name), name);
         }
         fs::create_dir_all(src.join("empty/nested")).unwrap();
         let dest = d.path().join("dest");
         let r = op_copy(&src, &dest, TransferOpts::default());
         assert!(r.errors().is_empty(), "{:?}", r.errors());
-        assert_eq!(fs::read_to_string(dest.join("new\nline.txt")).unwrap(), "new\nline.txt");
+        for name in &names {
+            assert_eq!(fs::read_to_string(dest.join(name)).unwrap(), *name);
+        }
         assert!(dest.join("empty/nested").is_dir());
         let empty = d.path().join("only_empty");
         fs::create_dir(&empty).unwrap();

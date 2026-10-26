@@ -4,6 +4,10 @@ Parallel copy, move, delete, clean and size for large folders — made for trees
 small files (datasets, checkpoints, caches), where `cp -r`, `mv`, `rm -rf` and `du` work
 one file at a time.
 
+![fastops vs cp, du and rm on 1,000,000 files](demo.gif)
+
+*A real run on 1,000,000 files; copy and delete are timed until the data is on disk.*
+
 ```
 fastops copy   SRC DEST  [--skip-existing]
 fastops move   SRC DEST  [--skip-existing]

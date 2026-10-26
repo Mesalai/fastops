@@ -8,6 +8,7 @@ readme = "README.md"
 repository = "https://github.com/mesalai/fastops"
 keywords = ["copy", "delete", "disk-usage", "parallel", "cli"]
 categories = ["command-line-utilities", "filesystem"]
+exclude = ["demo.gif"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

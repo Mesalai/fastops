@@ -58,11 +58,11 @@ enum Cmd {
         #[command(flatten)]
         opts: TransferOpts,
     },
-    /// Delete SRC, after showing what will go and asking.
+    /// Delete SRC, without asking.
     Delete {
         src: PathBuf,
-        /// Do not ask for confirmation
-        #[arg(short = 'y', long)]
+        /// Accepted for older scripts: delete never asks
+        #[arg(short = 'y', long, hide = true)]
         yes: bool,
     },
     /// Find build and cache folders (node_modules, Rust target, __pycache__, ...) and delete them.
@@ -663,28 +663,6 @@ fn delete_target(path: &Path) -> Option<PathBuf> {
     Some(PathBuf::from(unsafe { std::ffi::OsStr::from_encoded_bytes_unchecked(trimmed) }))
 }
 
-/// Shows what `delete` will remove and asks (Ok(false): the user said no).
-fn confirm_delete(src: &Path, tree: &Tree) -> io::Result<bool> {
-    println!(
-        "About to delete {}: {} files, {} links, {} folders.",
-        src.display(),
-        format_count(tree.files.len() as u64),
-        format_count(tree.links.len() as u64),
-        format_count(tree.dirs.len() as u64)
-    );
-    if !tree.errors.is_empty() {
-        println!("{} entries could not be read and will be left in place.", format_count(tree.errors.len() as u64));
-    }
-    if !io::stdin().is_terminal() {
-        return Err(io::Error::other("not asking without a terminal: pass --yes to delete"));
-    }
-    print!("Delete? [y/N] ");
-    io::stdout().flush()?;
-    let mut answer = String::new();
-    io::stdin().lock().read_line(&mut answer)?;
-    Ok(matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes"))
-}
-
 fn delete_tree(tree: &Tree) -> Report {
     let report = Report::with_errors(tree.errors.clone());
     // symlinks are removed as links: what they point to is never touched
@@ -706,8 +684,8 @@ fn delete_tree(tree: &Tree) -> Report {
     report
 }
 
-/// None: refused or cancelled (the reason is printed).
-fn op_delete(src: &Path, yes: bool) -> Option<Report> {
+/// None: refused (the reason is printed).
+fn op_delete(src: &Path) -> Option<Report> {
     let Some(src) = delete_target(src) else {
         eprintln!("Refusing to delete '.' or '..': name the folder instead.");
         return None;
@@ -717,21 +695,7 @@ fn op_delete(src: &Path, yes: bool) -> Option<Report> {
         eprintln!("Refusing to delete {}: it is the filesystem root or your home folder.", src.display());
         return None;
     }
-    let tree = walk(src);
-    if !yes {
-        match confirm_delete(src, &tree) {
-            Ok(true) => {}
-            Ok(false) => {
-                println!("Nothing deleted.");
-                return None;
-            }
-            Err(e) => {
-                eprintln!("{e}");
-                return None;
-            }
-        }
-    }
-    Some(delete_tree(&tree))
+    Some(delete_tree(&walk(src)))
 }
 
 fn format_count(n: u64) -> String {
@@ -1031,7 +995,7 @@ fn main() -> ExitCode {
                     eprintln!("Provide one operation:");
                     eprintln!("  fastops copy SRC DEST [--skip-existing]");
                     eprintln!("  fastops move SRC DEST [--skip-existing]");
-                    eprintln!("  fastops delete SRC [--yes]");
+                    eprintln!("  fastops delete SRC");
                     eprintln!("  fastops clean [PATH] [--dry-run] [--yes] [--min-size 100M] [--venv]");
                     eprintln!("  fastops size PATH [--tree [--min-size 100G]]");
                     return ExitCode::from(2);
@@ -1059,11 +1023,11 @@ fn main() -> ExitCode {
             }
             op_move(&src, &dest, opts).finish("Moved")
         }
-        Cmd::Delete { src, yes } => {
+        Cmd::Delete { src, .. } => {
             if !exists(&src) {
                 return ExitCode::FAILURE;
             }
-            match op_delete(&src, yes) {
+            match op_delete(&src) {
                 Some(report) => report.finish("Deleted"),
                 None => ExitCode::from(2),
             }

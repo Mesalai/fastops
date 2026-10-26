@@ -1,6 +1,6 @@
 [package]
 name = "fastops"
-version = "0.1.2"
+version = "0.2.1"
 edition = "2024"
 license = "MIT"
 description = "Fast, safe copy, move, delete, clean and size for large folders"

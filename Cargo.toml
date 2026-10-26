@@ -1,0 +1,17 @@
+[package]
+name = "fastops"
+version = "0.1.2"
+edition = "2024"
+license = "MIT"
+description = "Fast, safe copy, move, delete, clean and size for large folders"
+readme = "README.md"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+rayon = "1"
+indicatif = { version = "0.17", features = ["rayon"] }
+walkdir = "2"
+jwalk = "0.8"
+dashmap = "6"
+[dev-dependencies]
+tempfile = "3"

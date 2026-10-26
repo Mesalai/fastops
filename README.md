@@ -66,7 +66,7 @@ file (device, socket, pipe) is listed at the end, and the exit status is non-zer
 ## Install
 
 ```
-cargo install --path .
+cargo install fastops
 ```
 
 The original flag style (`fastops --c SRC DEST`, `--m`, `--d`, `--check-size`) still works.
